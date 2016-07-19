@@ -104,8 +104,8 @@ def seconds_since_midnight(time):
 def interval(start, end):
     """
     Calculates interval in seconds between two datetime.time objects.
-    :param start: Integer (seconds)
-    :param end: Integer (seconds)
+    :param start: datetime.time object
+    :param end: datetime.time object
     :return: Integer
     """
     return seconds_since_midnight(end) - seconds_since_midnight(start)
