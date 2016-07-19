@@ -19,6 +19,9 @@ log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 def jsonify(function):
     """
     Creates a response with the JSON representation of wrapped function result.
+    :param function: View function
+    :return: Response object with mimetype set to json and result of wrapped
+             function dumped to JSON
     """
     @wraps(function)
     def inner(*args, **kwargs):
@@ -49,6 +52,8 @@ def get_data():
             },
         }
     }
+
+    :return: Dict structured as above
     """
     data = {}
     with open(app.config['DATA_CSV'], 'r') as csvfile:
@@ -74,6 +79,10 @@ def get_data():
 def group_by_weekday(items):
     """
     Groups presence entries by weekday.
+    :param items: Dict with datetime object as key, every value is dict
+                  containing start and end of presence as datetime
+    :return: List of lists, one list per day of week, containing all presence
+             entries as int (seconds)
     """
     result = [[], [], [], [], [], [], []]  # one list for every day in week
     for date in items:
@@ -86,13 +95,18 @@ def group_by_weekday(items):
 def seconds_since_midnight(time):
     """
     Calculates amount of seconds since midnight.
+    :param time: Time object
+    :return: Integer (seconds)
     """
     return time.hour * 3600 + time.minute * 60 + time.second
 
 
 def interval(start, end):
     """
-    Calculates inverval in seconds between two datetime.time objects.
+    Calculates interval in seconds between two datetime.time objects.
+    :param start: Integer (seconds)
+    :param end: Integer (seconds)
+    :return: Integer
     """
     return seconds_since_midnight(end) - seconds_since_midnight(start)
 
@@ -100,5 +114,7 @@ def interval(start, end):
 def mean(items):
     """
     Calculates arithmetic mean. Returns zero for empty lists.
+    :param items: List of integers
+    :return: Float, arithmetic mean
     """
     return float(sum(items)) / len(items) if len(items) > 0 else 0
