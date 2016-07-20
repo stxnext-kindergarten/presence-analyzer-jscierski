@@ -9,7 +9,8 @@ import unittest
 
 from flask import Response
 
-from presence_analyzer import main, views, utils
+from presence_analyzer import main, utils
+from presence_analyzer.exceptions import UserNotFoundError
 
 
 TEST_DATA_CSV = os.path.join(
@@ -110,6 +111,34 @@ class PresenceAnalyzerViewsTestCase(unittest.TestCase):
         resp = self.client.get('/api/v1/presence_weekday/0')
         self.assertEqual(resp.status_code, 404)
 
+    def test_api_presence_start_end(self):
+        """
+        Test average start and end of presence per weekday.
+        """
+        resp = self.client.get('/api/v1/presence_start_end/11')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.content_type, 'application/json')
+        data = json.loads(resp.data)
+        expected_response = [
+            ['Mon', 33134.0, 57257.0],
+            ['Tue', 33590.0, 50154.0],
+            ['Wed', 33206.0, 58527.0],
+            ['Thu', 35602.0, 58586.0],
+            ['Fri', 47816.0, 54242.0],
+            ['Sat', 0, 0],
+            ['Sun', 0, 0]
+        ]
+        self.assertEqual(data, expected_response)
+        self.assertEqual(len(data), 7)
+
+    def test_api_presence_start_end_404(self):
+        """
+        Test average start and end of presence per weekday
+        for nonexistent user.
+        """
+        resp = self.client.get('/api/v1/presence_start_end/0')
+        self.assertEqual(resp.status_code, 404)
+
 
 class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
     """
@@ -158,6 +187,22 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         expected_response = datetime.time(9, 39, 5)
         self.assertEqual(data[10][sample_date]['start'], expected_response)
 
+    def test_get_user_data(self):
+        """
+        Test getting CSV file and extracting user-specific data from it.
+        """
+        global_data = utils.get_data()
+        user_data = utils.get_user_data(10)
+        self.assertEqual(user_data, global_data[10])
+
+    def test_get_nonexistent_user_data(self):
+        """
+        Test getting CSV file and extracting user-specific data from it, when
+        user does not exist.
+        """
+        with self.assertRaises(UserNotFoundError):
+            utils.get_user_data(0)
+
     def test_group_by_weekday(self):
         """
         Test grouping by weekday
@@ -174,6 +219,65 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         }
         expected_result = [[28800], [36000], [], [], [], [], []]
         self.assertEqual(utils.group_by_weekday(data), expected_result)
+
+    def test_presence_start_end(self):
+        """
+        Test grouping by weekday start/end entries separately.
+        """
+        data = {
+            datetime.date(2016, 7, 18): {
+                'start': datetime.time(9, 0, 0),
+                'end': datetime.time(17, 0, 0),
+            },
+            datetime.date(2016, 7, 25): {
+                'start': datetime.time(8, 0, 0),
+                'end': datetime.time(16, 0, 0),
+            },
+            datetime.date(2016, 7, 19): {
+                'start': datetime.time(8, 0, 0),
+                'end': datetime.time(18, 0, 0),
+            }
+        }
+        expected_result = {
+            0: {'start': [28800, 32400], 'end': [57600, 61200]},
+            1: {'start': [28800], 'end': [64800]},
+            2: {'start': [], 'end': []},
+            3: {'start': [], 'end': []},
+            4: {'start': [], 'end': []},
+            5: {'start': [], 'end': []},
+            6: {'start': [], 'end': []}
+        }
+        self.assertEqual(
+            utils.group_start_end_by_weekday(data),
+            expected_result,
+        )
+
+    def test_average_start_end_time(self):
+        """
+        Test average start and end time function
+        """
+        data = {
+            0: {'start': [28800, 32400], 'end': [57600, 61200]},
+            1: {'start': [28800], 'end': [64800]},
+            2: {'start': [], 'end': []},
+            3: {'start': [], 'end': []},
+            4: {'start': [], 'end': []},
+            5: {'start': [], 'end': []},
+            6: {'start': [], 'end': []}
+        }
+        expected_result = [
+            ['Mon', 30600, 59400],
+            ['Tue', 28800, 64800],
+            ['Wed', 0, 0],
+            ['Thu', 0, 0],
+            ['Fri', 0, 0],
+            ['Sat', 0, 0],
+            ['Sun', 0, 0]
+        ]
+        self.assertEqual(
+            utils.count_average_start_end_time(data),
+            expected_result,
+        )
 
     def test_seconds_since_midnight(self):
         """
