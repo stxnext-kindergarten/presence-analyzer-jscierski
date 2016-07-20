@@ -3,15 +3,18 @@
 Helper functions used in views.
 """
 
+import calendar
 import csv
+import logging
+
 from json import dumps
 from functools import wraps
 from datetime import datetime
-import logging
 
 from flask import Response
 
 from presence_analyzer.main import app
+from presence_analyzer.exceptions import UserNotFoundError
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -76,6 +79,20 @@ def get_data():
     return data
 
 
+def get_user_data(user_id):
+    """
+    Returns user-specific data.
+    :param user_id: Integer
+    :return: Dict with datetime object as key, with dict as value containing
+            start and end of presence as datetime.
+    """
+    data = get_data()
+    if user_id not in data:
+        log.debug('User %s not found!', user_id)
+        raise UserNotFoundError('User not found')
+    return data[user_id]
+
+
 def group_by_weekday(items):
     """
     Groups presence entries by weekday.
@@ -89,6 +106,45 @@ def group_by_weekday(items):
         start = items[date]['start']
         end = items[date]['end']
         result[date.weekday()].append(interval(start, end))
+    return result
+
+
+def group_start_end_by_weekday(items):
+    """
+    Groups start and end entries per weekday.
+    :param items: Dict with datetime object as key, every value is dict
+                  containing start and end of presence as datetime
+    :return: Dict with 7 keys (0-7), one dict per day of week, containing all
+             start and end entries as int (seconds).
+    """
+    result = {k: {'start': [], 'end': []} for k in xrange(7)}
+    for date in items:
+        start = items[date]['start']
+        end = items[date]['end']
+        result[date.weekday()]['start'].append(seconds_since_midnight(start))
+        result[date.weekday()]['end'].append(seconds_since_midnight(end))
+    return result
+
+
+def count_average_start_end_time(items):
+    """
+    Counts average start and end time as seconds from midnight for dict of day
+    dictionaries ({'start': [123, 345], 'end': [867, 998]})
+    :param items: dict of dictionaries as written above
+    :return: list of 7 lists, every list contains 3 elements:
+    - abbreviated name of week day,
+    - average start time,
+    - average end time.
+    """
+    result = []
+    for idx, day in items.iteritems():
+        result.append(
+            [
+                calendar.day_abbr[idx],
+                mean(day['start']),
+                mean(day['end']),
+            ]
+        )
     return result
 
 

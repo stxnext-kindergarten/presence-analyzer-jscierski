@@ -2,3 +2,5 @@
 """
 Presence analyzer.
 """
+
+from presence_analyzer import views
