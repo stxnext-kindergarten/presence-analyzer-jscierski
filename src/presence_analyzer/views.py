@@ -6,7 +6,7 @@ Defines views.
 import calendar
 import logging
 
-from flask import redirect
+from flask import redirect, render_template, url_for
 from flask import jsonify as jsonify_func
 
 from presence_analyzer.exceptions import UserNotFoundError
@@ -30,14 +30,38 @@ def user_not_found(error):
 @app.route('/')
 def mainpage():
     """
-    Redirects to front page.
+    Redirects to mean time per weekday page.
     """
-    return redirect('/static/presence_weekday.html')
+    return redirect(url_for('presence_weekday_view'))
+
+
+@app.route('/mean_time_weekday')
+def mean_time_weekday_view():
+    """
+    Renders mean_time_weekday template.
+    """
+    return render_template('mean_time_weekday.html')
+
+
+@app.route('/presence_start_end')
+def presence_start_end_view():
+    """
+    Renders presence_start_end template.
+    """
+    return render_template('presence_start_end.html')
+
+
+@app.route('/presence_weekday')
+def presence_weekday_view():
+    """
+    Renders presence_weekday template.
+    """
+    return render_template('presence_weekday.html')
 
 
 @app.route('/api/v1/users', methods=['GET'])
 @jsonify
-def users_view():
+def api_users_view():
     """
     Users listing for dropdown.
     """
@@ -50,7 +74,7 @@ def users_view():
 
 @app.route('/api/v1/mean_time_weekday/<int:user_id>', methods=['GET'])
 @jsonify
-def mean_time_weekday_view(user_id):
+def api_mean_time_weekday_view(user_id):
     """
     Returns mean presence time of given user grouped by weekday.
     """
@@ -66,7 +90,7 @@ def mean_time_weekday_view(user_id):
 
 @app.route('/api/v1/presence_weekday/<int:user_id>', methods=['GET'])
 @jsonify
-def presence_weekday_view(user_id):
+def api_presence_weekday_view(user_id):
     """
     Returns total presence time of given user grouped by weekday.
     """
@@ -83,7 +107,7 @@ def presence_weekday_view(user_id):
 
 @app.route('/api/v1/presence_start_end/<int:user_id>', methods=['GET'])
 @jsonify
-def presence_start_end_view(user_id):
+def api_presence_start_end_view(user_id):
     """
     Returns average start and end of work for user for every weekday
     """
