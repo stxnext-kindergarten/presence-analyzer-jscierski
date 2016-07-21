@@ -1,0 +1,47 @@
+{% macro navigation(active) %}
+    <li {% if active == 'website.presence_weekday_view' %}id="selected"{% endif %}>
+        <a href="{{ url_for('website.presence_weekday_view') }}">Presence by weekday</a>
+    </li>
+    <li {% if active == 'website.mean_time_weekday_view' %}id="selected"{% endif %}>
+        <a href="{{ url_for('website.mean_time_weekday_view') }}">Presence mean time</a>
+    </li>
+    <li {% if active == 'website.presence_start_end_view' %}id="selected"{% endif %}>
+        <a href="{{ url_for('website.presence_start_end_view') }}">Presence start-end</a>
+    </li>
+{% endmacro %}
+
+
+<!doctype html>
+<html lang=en>
+<head>
+    <meta charset=utf-8>
+    <title>Presence analyzer</title>
+    <meta name="keywords" content="" />
+    <meta name="description" content=""/>
+    <meta name="author" content="STX Next sp. z o.o."/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="{{ url_for('static', filename='css/normalize.css') }}" media="all" rel="stylesheet" type="text/css" />
+    <link href="{{ url_for('static', filename='css/style.css') }}" media="all" rel="stylesheet" type="text/css" />
+
+    <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script type="text/javascript">
+    {% block script %}
+    {% endblock %}
+    </script>
+</head>
+
+<body>
+    <div id="main">
+        <div id="header">
+            <h1>Presence analyzer</h1>
+            <ul>
+                {{ navigation(active=request.endpoint) }}
+            </ul>
+        </div>
+        {% block body %}
+        {% endblock %}
+    </div>
+</body>
