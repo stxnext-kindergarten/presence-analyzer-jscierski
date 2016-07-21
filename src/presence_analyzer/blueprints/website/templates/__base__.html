@@ -1,12 +1,12 @@
 {% macro navigation(active) %}
     <li {% if active == 'presence_weekday_view' %}id="selected"{% endif %}>
-        <a href="{{ url_for('presence_weekday_view') }}">Presence by weekday</a>
+        <a href="{{ url_for('website.presence_weekday_view') }}">Presence by weekday</a>
     </li>
     <li {% if active == 'mean_time_weekday_view' %}id="selected"{% endif %}>
-        <a href="{{ url_for('mean_time_weekday_view') }}">Presence mean time</a>
+        <a href="{{ url_for('website.mean_time_weekday_view') }}">Presence mean time</a>
     </li>
     <li {% if active == 'presence_start_end_view' %}id="selected"{% endif %}>
-        <a href="{{ url_for('presence_start_end_view') }}">Presence start-end</a>
+        <a href="{{ url_for('website.presence_start_end_view') }}">Presence start-end</a>
     </li>
 {% endmacro %}
 

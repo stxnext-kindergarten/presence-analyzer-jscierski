@@ -6,15 +6,14 @@ Helper functions used in views.
 import calendar
 import csv
 import logging
-
-from json import dumps
-from functools import wraps
 from datetime import datetime
+from functools import wraps
+from json import dumps
 
 from flask import Response
 
 from presence_analyzer.main import app
-from presence_analyzer.exceptions import UserNotFoundError
+from presence_analyzer.blueprints.api_v1.exceptions import UserNotFoundError
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
