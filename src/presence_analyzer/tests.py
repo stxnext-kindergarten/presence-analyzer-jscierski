@@ -17,6 +17,10 @@ TEST_DATA_CSV = os.path.join(
     os.path.dirname(__file__), '..', '..', 'runtime', 'data', 'test_data.csv'
 )
 
+TEST_DATA_XML = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'runtime', 'data', 'test_users.xml'
+)
+
 
 # pylint: disable=maybe-no-member, too-many-public-methods
 class PresenceAnalyzerApiTestCase(unittest.TestCase):
@@ -29,6 +33,7 @@ class PresenceAnalyzerApiTestCase(unittest.TestCase):
         Before each test, set up a environment.
         """
         main.app.config.update({'DATA_CSV': TEST_DATA_CSV})
+        main.app.config.update({'USER_DATA_XML': TEST_DATA_XML})
         self.client = main.app.test_client()
 
     def tearDown(self):
@@ -46,7 +51,22 @@ class PresenceAnalyzerApiTestCase(unittest.TestCase):
         self.assertEqual(resp.content_type, 'application/json')
         data = json.loads(resp.data)
         self.assertEqual(len(data), 2)
-        self.assertDictEqual(data[0], {u'user_id': 10, u'name': u'User 10'})
+        self.assertDictEqual(data[0], {u'user_id': 10, u'name': u'John S.'})
+
+    def test_api_user_data(self):
+        """
+        Tests user personal data endpoint.
+        """
+        resp = self.client.get('/api/v1/user/10')
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(resp.data)
+        self.assertDictEqual(
+            data,
+            dict(
+                avatar_url='https://intranet.stxnext.pl/api/images/users/10',
+                name='John S.',
+            ),
+        )
 
     def test_api_mean_time_weekday(self):
         """
@@ -186,6 +206,7 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         Before each test, set up a environment.
         """
         main.app.config.update({'DATA_CSV': TEST_DATA_CSV})
+        main.app.config.update({'USER_DATA_XML': TEST_DATA_XML})
 
     def tearDown(self):
         """
@@ -210,11 +231,30 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         self.assertEqual(result.data, json.dumps(test_data))
         self.assertEqual(result.mimetype, 'application/json')
 
-    def test_get_data(self):
+    def test_get_personal_info(self):
         """
-        Test parsing of CSV file.
+        Tests getting personal info from xml file.
         """
-        data = utils.get_data()
+        expected_data = {
+            'name': 'John S.',
+            'avatar_url': 'https://intranet.stxnext.pl/api/images/users/10'
+        }
+        data = utils.get_user_personal_data(10)
+        self.assertEqual(data, expected_data)
+
+    def test_info_nonexistent_user(self):
+        """
+        Tests getting personal info from xml file.
+        """
+        expected_data = None
+        data = utils.get_user_personal_data(9999)
+        self.assertEqual(data, expected_data)
+
+    def test_get_presence_data(self):
+        """
+        Test parsing of CSV file with presence entries.
+        """
+        data = utils.get_presence_data()
         self.assertIsInstance(data, dict)
         self.assertItemsEqual(data.keys(), [10, 11])
         sample_date = datetime.date(2013, 9, 10)
@@ -223,12 +263,12 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         expected_response = datetime.time(9, 39, 5)
         self.assertEqual(data[10][sample_date]['start'], expected_response)
 
-    def test_get_user_data(self):
+    def test_get_user_presence_data(self):
         """
         Test getting CSV file and extracting user-specific data from it.
         """
-        global_data = utils.get_data()
-        user_data = utils.get_user_data(10)
+        global_data = utils.get_presence_data()
+        user_data = utils.get_user_presence_data(10)
         self.assertEqual(user_data, global_data[10])
 
     def test_get_nonexistent_user_data(self):
@@ -237,7 +277,7 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         user does not exist.
         """
         with self.assertRaises(UserNotFoundError):
-            utils.get_user_data(0)
+            utils.get_user_presence_data(0)
 
     def test_group_by_weekday(self):
         """

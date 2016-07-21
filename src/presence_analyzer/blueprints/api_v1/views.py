@@ -11,8 +11,9 @@ from flask import jsonify as jsonify_func
 
 from presence_analyzer.blueprints.api_v1.exceptions import UserNotFoundError
 from presence_analyzer.blueprints.api_v1.utils import (
-    jsonify, get_data, mean, group_by_weekday,
-    group_start_end_by_weekday, count_average_start_end_time, get_user_data
+    jsonify, mean, group_by_weekday,
+    group_start_end_by_weekday, count_average_start_end_time,
+    get_personal_data, get_user_personal_data, get_user_presence_data
 )
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -34,11 +35,20 @@ def api_users_view():
     """
     Users listing for dropdown.
     """
-    data = get_data()
+    data = get_personal_data()
     return [
-        {'user_id': i, 'name': 'User {0}'.format(str(i))}
-        for i in data.keys()
+        {'user_id': i, 'name': v.get('name')}
+        for i, v in data.iteritems()
     ]
+
+
+@api_v1.route('/user/<int:user_id>')
+@jsonify
+def api_user_view(user_id):
+    """
+    One user basic data (name, avatar)
+    """
+    return get_user_personal_data(user_id)
 
 
 @api_v1.route('/mean_time_weekday/<int:user_id>', methods=['GET'])
@@ -47,7 +57,7 @@ def api_mean_time_weekday_view(user_id):
     """
     Returns mean presence time of given user grouped by weekday.
     """
-    user_data = get_user_data(user_id)
+    user_data = get_user_presence_data(user_id)
     weekdays = group_by_weekday(user_data)
     result = [
         (calendar.day_abbr[weekday], mean(intervals))
@@ -63,7 +73,7 @@ def api_presence_weekday_view(user_id):
     """
     Returns total presence time of given user grouped by weekday.
     """
-    user_data = get_user_data(user_id)
+    user_data = get_user_presence_data(user_id)
     weekdays = group_by_weekday(user_data)
     result = [
         (calendar.day_abbr[weekday], sum(intervals))
@@ -80,7 +90,7 @@ def api_presence_start_end_view(user_id):
     """
     Returns average start and end of work for user for every weekday
     """
-    user_data = get_user_data(user_id)
+    user_data = get_user_presence_data(user_id)
     weekdays = group_start_end_by_weekday(user_data)
     average_start_end = count_average_start_end_time(weekdays)
     return average_start_end
