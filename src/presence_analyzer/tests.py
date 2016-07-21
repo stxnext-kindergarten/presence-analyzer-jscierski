@@ -19,9 +19,9 @@ TEST_DATA_CSV = os.path.join(
 
 
 # pylint: disable=maybe-no-member, too-many-public-methods
-class PresenceAnalyzerViewsTestCase(unittest.TestCase):
+class PresenceAnalyzerApiTestCase(unittest.TestCase):
     """
-    Views tests.
+    API blueprint tests.
     """
 
     def setUp(self):
@@ -36,14 +36,6 @@ class PresenceAnalyzerViewsTestCase(unittest.TestCase):
         Get rid of unused objects after each test.
         """
         pass
-
-    def test_mainpage(self):
-        """
-        Test main page redirect.
-        """
-        resp = self.client.get('/')
-        self.assertEqual(resp.status_code, 302)
-        assert resp.headers['Location'].endswith('/presence_weekday')
 
     def test_api_users(self):
         """
@@ -138,6 +130,50 @@ class PresenceAnalyzerViewsTestCase(unittest.TestCase):
         """
         resp = self.client.get('/api/v1/presence_start_end/0')
         self.assertEqual(resp.status_code, 404)
+
+
+class PresenceAnalyzerWebsiteTestCase(unittest.TestCase):
+    """
+    Website blueprint tests.
+    """
+    def setUp(self):
+        """
+        Before each test, set up a environment.
+        """
+        main.app.config.update({'DATA_CSV': TEST_DATA_CSV})
+        self.client = main.app.test_client()
+
+    def test_mainpage(self):
+        """
+        Test main page redirect.
+        """
+        resp = self.client.get('/')
+        self.assertEqual(resp.status_code, 302)
+        assert resp.headers['Location'].endswith('/presence_weekday')
+
+    def test_presence_weekday(self):
+        """
+        Test mean time per weekday view.
+        """
+        resp = self.client.get('/presence_weekday')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('<h2>Presence by weekday</h2>', resp.data)
+
+    def test_mean_time_weekday(self):
+        """
+        Test mean time per weekday view.
+        """
+        resp = self.client.get('/mean_time_weekday')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('<h2>Presence mean time by weekday</h2>', resp.data)
+
+    def test_presence_start_end(self):
+        """
+        Test mean time per weekday view.
+        """
+        resp = self.client.get('/presence_start_end')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('<h2>Presence start-end weekday</h2>', resp.data)
 
 
 class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
@@ -332,7 +368,8 @@ def suite():
     Default test suite.
     """
     base_suite = unittest.TestSuite()
-    base_suite.addTest(unittest.makeSuite(PresenceAnalyzerViewsTestCase))
+    base_suite.addTest(unittest.makeSuite(PresenceAnalyzerApiTestCase))
+    base_suite.addTest(unittest.makeSuite(PresenceAnalyzerWebsiteTestCase))
     base_suite.addTest(unittest.makeSuite(PresenceAnalyzerUtilsTestCase))
     return base_suite
 
