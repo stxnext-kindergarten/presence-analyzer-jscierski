@@ -28,7 +28,8 @@ setup(
         'setuptools',
         'Flask',
         'lxml',
-        'requests'
+        'requests',
+        'mock',
     ],
     entry_points={
         'console_scripts': [
