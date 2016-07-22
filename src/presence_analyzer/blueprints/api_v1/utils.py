@@ -6,10 +6,12 @@ Helper functions used in views.
 import calendar
 import csv
 import logging
+
 from datetime import datetime
 from functools import wraps
-from json import dumps
 
+from json import dumps
+from lxml import etree
 from flask import Response
 
 from presence_analyzer.main import app
@@ -37,7 +39,56 @@ def jsonify(function):
     return inner
 
 
-def get_data():
+def get_personal_data():
+    """
+    Extracts personal data (name, avatar url) from XML file and groups it by
+    user_id
+    :return: Dict structured like that:
+    data = {
+        'user_id': {
+            'name': 'Jacek S.',
+            'avatar_url': 'https://intranet.stxnext.pl/api/images/users/496'
+        }
+        ...
+    """
+    result = {}
+    tree = etree.parse(  # pylint: disable=maybe-no-member
+        app.config['USER_DATA_XML']
+    )
+    server_data = tree.xpath('//server')[0]
+    host = server_data.findtext('host')
+    protocol = server_data.findtext('protocol')
+    for user in tree.xpath('//users/user'):
+        user_id = int(user.get('id'))
+        name = user.findtext('name')
+        avatar_path = user.findtext('avatar')
+        avatar_url = '{protocol}://{host}{avatar_path}'.format(
+            protocol=protocol,
+            host=host,
+            avatar_path=avatar_path,
+        )
+        result[user_id] = {
+            'name': name,
+            'avatar_url': avatar_url,
+        }
+    return result
+
+
+def get_user_personal_data(user_id):
+    """
+    Gets personal data (name, avatar url) for specified user.
+    :param user_id: Integer
+    :return: Dict structured like that:
+    data = {
+        'name': 'Jacek S.',
+        'avatar_url': 'https://intranet.stxnext.pl/api/images/users/496'
+    }
+    """
+    data = get_personal_data()
+    return data.get(user_id)
+
+
+def get_presence_data():
     """
     Extracts presence data from CSV file and groups it by user_id.
 
@@ -51,7 +102,7 @@ def get_data():
             datetime.date(2013, 10, 2): {
                 'start': datetime.time(8, 30, 0),
                 'end': datetime.time(16, 45, 0),
-            },
+            }
         }
     }
 
@@ -78,14 +129,14 @@ def get_data():
     return data
 
 
-def get_user_data(user_id):
+def get_user_presence_data(user_id):
     """
     Returns user-specific data.
     :param user_id: Integer
     :return: Dict with datetime object as key, with dict as value containing
             start and end of presence as datetime.
     """
-    data = get_data()
+    data = get_presence_data()
     if user_id not in data:
         log.debug('User %s not found!', user_id)
         raise UserNotFoundError('User not found')

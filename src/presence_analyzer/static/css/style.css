@@ -59,3 +59,16 @@ body {
     color: black;
     font-weight: bold;
 }
+
+#user_image {
+    float: right;
+}
+
+div.top-content {
+    min-height: 110px;
+    padding: 5px;
+}
+
+#error_message {
+    display: none;
+}

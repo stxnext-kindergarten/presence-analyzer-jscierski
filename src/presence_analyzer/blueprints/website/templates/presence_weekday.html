@@ -4,6 +4,7 @@
     (function($) {
         $(document).ready(function(){
             var loading = $('#loading');
+            var error_message = $('#error_message');
             $.getJSON("/api/v1/users", function(result) {
                 var dropdown = $("#user_id");
                 $.each(result, function(item) {
@@ -15,6 +16,7 @@
             $('#user_id').change(function(){
                 var selected_user = $("#user_id").val();
                 var chart_div = $('#chart_div');
+                error_message.hide();
                 if(selected_user) {
                     loading.show();
                     chart_div.hide();
@@ -25,6 +27,9 @@
                         loading.hide();
                         var chart = new google.visualization.PieChart(chart_div[0]);
                         chart.draw(data, options);
+                    }).error(function() {
+                        loading.hide();
+                        error_message.show();
                     });
                 }
             });
@@ -32,19 +37,4 @@
     })(jQuery);
 {% endblock %}
 
-
-{% block body %}
-    <div id="content">
-        <h2>Presence by weekday</h2>
-        <p>
-            <select id="user_id" style="display: none">
-                <option value="">--</option>
-            </select>
-            <div id="chart_div" style="display: none">
-            </div>
-            <div id="loading">
-                <img src="{{ url_for('static', filename='img/loading.gif') }}" />
-            </div>
-        </p>
-    </div>
-{% endblock %}
+{% block title %}Presence by weekday{% endblock %}

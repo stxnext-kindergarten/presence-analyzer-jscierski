@@ -5,3 +5,13 @@ function parseInterval(value) {
         }
 
 google.load("visualization", "1", {packages:["corechart", "timeline"], 'language': 'pl'});
+
+$(document).ready( function() {
+    $('#user_id').change( function() {
+        var selected_user = $("#user_id").val();
+        $.getJSON("/api/v1/user/"+selected_user, function(result) {
+            var userImage = $("#user_image");
+            userImage.attr('src', result.avatar_url);
+        });
+    });
+});

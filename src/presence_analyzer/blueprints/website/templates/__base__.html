@@ -41,7 +41,21 @@
                 {{ navigation(active=request.endpoint) }}
             </ul>
         </div>
-        {% block body %}
-        {% endblock %}
+        <div id="content">
+            <div class="top-content">
+                <img id="user_image" src="">
+                <h2>{% block title %}{% endblock %}</h2>
+                <select id="user_id" style="display: none">
+                    <option value="">--</option>
+                </select>
+                <p id="error_message">Data not found</p>
+            </div>
+            <div id="chart_div" style="display: none">
+            </div>
+            <div id="loading">
+                <img src="{{ url_for('static', filename='img/loading.gif') }}" />
+            </div>
+
+        </div>
     </div>
 </body>
