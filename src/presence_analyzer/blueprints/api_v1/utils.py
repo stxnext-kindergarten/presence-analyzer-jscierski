@@ -2,22 +2,42 @@
 """
 Helper functions used in views.
 """
-
 import calendar
 import csv
 import logging
 
 from datetime import datetime
 from functools import wraps
-
 from json import dumps
 from lxml import etree
 from flask import Response
 
 from presence_analyzer.main import app
 from presence_analyzer.blueprints.api_v1.exceptions import UserNotFoundError
+from presence_analyzer.cache import MemoryCache
 
 log = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+cache_backend = MemoryCache()  # pylint: disable=invalid-name
+
+
+def cache(time):
+    """
+    Cache decorator used to cache any function using CACHE_BACKEND.
+    :param time: caching time (seconds)
+    :return: result of function
+    """
+    def _cache(function):
+        """
+        The real decorator.
+        """
+        def wrapper(*args, **kwargs):
+            """
+            Wrapper function.
+            """
+            return cache_backend.get_or_set(function, time, *args, **kwargs)
+        return wrapper
+    return _cache
 
 
 def jsonify(function):
@@ -39,6 +59,7 @@ def jsonify(function):
     return inner
 
 
+@cache(60)
 def get_personal_data():
     """
     Extracts personal data (name, avatar url) from XML file and groups it by
@@ -88,6 +109,7 @@ def get_user_personal_data(user_id):
     return data.get(user_id)
 
 
+@cache(60)
 def get_presence_data():
     """
     Extracts presence data from CSV file and groups it by user_id.
@@ -121,10 +143,12 @@ def get_presence_data():
                 date = datetime.strptime(row[1], '%Y-%m-%d').date()
                 start = datetime.strptime(row[2], '%H:%M:%S').time()
                 end = datetime.strptime(row[3], '%H:%M:%S').time()
+                data.setdefault(user_id, {})[date] = {
+                    'start': start,
+                    'end': end
+                }
             except (ValueError, TypeError):
                 log.debug('Problem with line %d: ', i, exc_info=True)
-
-            data.setdefault(user_id, {})[date] = {'start': start, 'end': end}
 
     return data
 

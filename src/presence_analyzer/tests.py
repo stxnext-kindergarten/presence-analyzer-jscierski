@@ -8,10 +8,12 @@ import os.path
 import unittest
 
 from flask import Response
+from mock import Mock, patch
 
 from presence_analyzer import main
 from presence_analyzer.blueprints.api_v1 import utils
 from presence_analyzer.blueprints.api_v1.exceptions import UserNotFoundError
+from presence_analyzer.cache import Cache, MemoryCache
 
 TEST_DATA_CSV = os.path.join(
     os.path.dirname(__file__), '..', '..', 'runtime', 'data', 'test_data.csv'
@@ -35,6 +37,7 @@ class PresenceAnalyzerApiTestCase(unittest.TestCase):
         main.app.config.update({'DATA_CSV': TEST_DATA_CSV})
         main.app.config.update({'USER_DATA_XML': TEST_DATA_XML})
         self.client = main.app.test_client()
+        utils.cache_backend.clean()
 
     def tearDown(self):
         """
@@ -207,6 +210,7 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         """
         main.app.config.update({'DATA_CSV': TEST_DATA_CSV})
         main.app.config.update({'USER_DATA_XML': TEST_DATA_XML})
+        utils.cache_backend.clean()
 
     def tearDown(self):
         """
@@ -262,6 +266,16 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         self.assertItemsEqual(data[10][sample_date].keys(), ['start', 'end'])
         expected_response = datetime.time(9, 39, 5)
         self.assertEqual(data[10][sample_date]['start'], expected_response)
+
+    @patch.object(utils, 'csv')
+    def test_wrong_presence_data(self, mock_method):
+        """
+        Test parsing fake, wrong data causing exception.
+        """
+        fake_data = [[1, 2, 3], ['a', 2, 3, 4], [1, 2, 3, 4]]
+        mock_method.reader.return_value = fake_data
+        data = utils.get_presence_data()
+        self.assertDictEqual(data, {})
 
     def test_get_user_presence_data(self):
         """
@@ -403,6 +417,70 @@ class PresenceAnalyzerUtilsTestCase(unittest.TestCase):
         self.assertIsInstance(utils.mean([1, 3]), float)
 
 
+class PresenceAnalyzerCacheTestCase(unittest.TestCase):
+    """
+    Tests for cache backends.
+    """
+    def setUp(self):
+        """
+        Before each test, set up a environment.
+        """
+        def tested_func(first, second):
+            """
+            Function for testing purposes, passed as argument to cache.
+            """
+            return ''.join([first, second])
+
+        self.tested_func = tested_func
+        self.base_cache = Cache()
+        self.memory_cache = MemoryCache()
+        self.memory_cache.clean()
+
+    def test_cache_save_read(self):
+        """
+        Tests when no data is stored in memory cache, saves data and then
+        checks cache read.
+        """
+        save = self.memory_cache.get_or_set(self.tested_func, 600, 'a', 'b')
+        self.assertEqual(save, 'ab')
+        read = self.memory_cache.get(self.tested_func, 'a', 'b')
+        self.assertEqual(read, 'ab')
+
+    @patch('presence_analyzer.cache.datetime')
+    def test_cache_expired(self, datetime_mock):
+        """
+        Tests data save now and then read when it expired.
+        """
+        self.memory_cache.set_expire(self.tested_func, 60, 'e', 'f')
+        fake_datetime = datetime.datetime.now() + datetime.timedelta(minutes=5)
+        datetime_mock.now = Mock(return_value=fake_datetime)
+        read = self.memory_cache.get(self.tested_func, 'e', 'f')
+        self.assertIsNone(read)
+
+    def test_different_args(self):
+        """
+        Tests save and read from memory cache for same function, but different
+        data.
+        """
+        save = self.memory_cache.get_or_set(self.tested_func, 600, 'a', 'b')
+        self.assertEqual(save, 'ab')
+        read_other_args = self.memory_cache.get(
+            self.tested_func,
+            'c',
+            'd',
+        )
+        self.assertIsNone(read_other_args)
+
+    def test_not_implemented(self):
+        """
+        Tests raising NotImplementedError for base Cache class.
+        """
+        with self.assertRaises(NotImplementedError):
+            self.base_cache.get(self.tested_func, 'a', 'b')
+        with self.assertRaises(NotImplementedError):
+            self.base_cache.set_expire(self.tested_func, 600, 'a', 'b')
+
+
 def suite():
     """
     Default test suite.
@@ -411,6 +489,7 @@ def suite():
     base_suite.addTest(unittest.makeSuite(PresenceAnalyzerApiTestCase))
     base_suite.addTest(unittest.makeSuite(PresenceAnalyzerWebsiteTestCase))
     base_suite.addTest(unittest.makeSuite(PresenceAnalyzerUtilsTestCase))
+    base_suite.addTest(unittest.makeSuite(PresenceAnalyzerCacheTestCase))
     return base_suite
 
 
